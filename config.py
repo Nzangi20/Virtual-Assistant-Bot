@@ -14,7 +14,7 @@ load_dotenv()
 # ──────────────────────────────────────────────
 # 🔑  Bot Token (REQUIRED)
 # ──────────────────────────────────────────────
-BOT_TOKEN = os.getenv("BOT_TOKEN")
+BOT_TOKEN = (os.getenv("BOT_TOKEN") or "").strip()
 
 if not BOT_TOKEN:
     raise ValueError(
@@ -30,7 +30,7 @@ DATABASE_PATH = os.getenv("DATABASE_PATH", "bot_database.db")
 # ──────────────────────────────────────────────
 # 🧠  AI Engine (Google Gemini)
 # ──────────────────────────────────────────────
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+GEMINI_API_KEY = (os.getenv("GEMINI_API_KEY") or "").strip()
 
 # ──────────────────────────────────────────────
 # 🏢  Business Information (customize per client)
