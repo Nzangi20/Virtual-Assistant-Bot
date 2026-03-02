@@ -188,16 +188,29 @@ KEYWORD_MAP: list[tuple[list[str], str]] = [
 async def handle_message(update: Update, context) -> None:
     """
     Handle regular text messages.
-    Checks for keyword matches and replies accordingly.
-    If no keyword matches, sends a default fallback response.
+    Tries AI first for natural, human-like conversation.
+    Falls back to keyword matching if AI is unavailable.
     """
     text = update.message.text
     log_user_and_message(update, text)
 
-    # Normalize the message for keyword matching
     lower_text = text.lower().strip()
 
-    # Check each keyword group for a match
+    # 1. Try AI response first (natural, human-like replies)
+    ai_response = await ai_engine.get_ai_response(text)
+
+    if ai_response:
+        await update.message.reply_text(
+            ai_response,
+            reply_markup=build_main_menu(),
+        )
+        logger.info(
+            f"AI response for '{lower_text[:40]}' "
+            f"from {update.effective_user.first_name}"
+        )
+        return
+
+    # 2. AI unavailable — fall back to keyword matching
     for keywords, response in KEYWORD_MAP:
         if any(kw in lower_text for kw in keywords):
             await update.message.reply_text(
@@ -211,37 +224,24 @@ async def handle_message(update: Update, context) -> None:
             )
             return
 
-    # No keyword matched — try AI response
-    ai_response = await ai_engine.get_ai_response(text)
-
-    if ai_response:
-        await update.message.reply_text(
-            ai_response,
-            reply_markup=build_main_menu(),
-        )
-        logger.info(
-            f"AI response for '{lower_text[:40]}' "
-            f"from {update.effective_user.first_name}"
-        )
-    else:
-        # AI unavailable — send a friendly fallback
-        fallback = (
-            "🤔 I'm not sure I understand that.\n\n"
-            "Try one of these:\n"
-            "• Tap a button in the menu below\n"
-            "• Type *help* for a list of commands\n"
-            "• Type *services* or *pricing*\n\n"
-            "Your message has been noted, and our team will follow up if needed!"
-        )
-        await update.message.reply_text(
-            fallback,
-            parse_mode="Markdown",
-            reply_markup=build_main_menu(),
-        )
-        logger.info(
-            f"No keyword match for '{lower_text}' "
-            f"from {update.effective_user.first_name}"
-        )
+    # 3. No AI and no keyword match — friendly fallback
+    fallback = (
+        "🤔 I'm not sure I understand that.\n\n"
+        "Try one of these:\n"
+        "• Tap a button in the menu below\n"
+        "• Type *help* for a list of commands\n"
+        "• Type *services* or *pricing*\n\n"
+        "Your message has been noted, and our team will follow up if needed!"
+    )
+    await update.message.reply_text(
+        fallback,
+        parse_mode="Markdown",
+        reply_markup=build_main_menu(),
+    )
+    logger.info(
+        f"Fallback for '{lower_text}' "
+        f"from {update.effective_user.first_name}"
+    )
 
 
 # ╔══════════════════════════════════════════════╗
