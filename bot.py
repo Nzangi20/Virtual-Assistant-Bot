@@ -9,7 +9,10 @@ Usage:
 """
 
 import asyncio
+import os
+import threading
 import logging
+from http.server import HTTPServer, BaseHTTPRequestHandler
 from telegram import (
     Update,
     InlineKeyboardButton,
@@ -263,29 +266,56 @@ async def error_handler(update: Update, context) -> None:
 # ║              MAIN                            ║
 # ╚══════════════════════════════════════════════╝
 
+class HealthCheckHandler(BaseHTTPRequestHandler):
+    """Simple HTTP server to pass hosting provider health checks (e.g. Render)."""
+    def do_GET(self):
+        self.send_response(200)
+        self.send_header("Content-type", "text/plain")
+        self.end_headers()
+        self.wfile.write(b"Bot is alive and healthy!")
+
+    def log_message(self, format, *args):
+        # Suppress request logging to keep logs clean
+        return
+
+
+def run_health_check_server():
+    """Run the health check server on the port specified by the environment."""
+    port = int(os.getenv("PORT", "8080"))
+    try:
+        server = HTTPServer(("0.0.0.0", port), HealthCheckHandler)
+        logger.info(f"🌐 Health check web server running on port {port}")
+        server.serve_forever()
+    except Exception as e:
+        logger.error(f"❌ Failed to start health check server: {e}")
+
+
 def main() -> None:
     """Initialize the database, build the application, and start polling."""
-    # 1. Initialize the database
+    # 1. Start the health check web server in a background thread for hosting providers
+    threading.Thread(target=run_health_check_server, daemon=True).start()
+
+    # 2. Initialize the database
     database.init_db()
     logger.info("📦 Database ready.")
 
-    # 2. Initialize AI engine
+    # 3. Initialize AI engine
     ai_engine.init_ai()
 
-    # 2. Build the Telegram bot application
+    # 4. Build the Telegram bot application
     app = Application.builder().token(config.BOT_TOKEN).build()
 
-    # 3. Register handlers (order matters!)
+    # 5. Register handlers (order matters!)
     app.add_handler(CommandHandler("start", start_command))
     app.add_handler(CommandHandler("menu", menu_command))
     app.add_handler(CommandHandler("help", help_command))
     app.add_handler(CallbackQueryHandler(button_callback))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
-    # 4. Register the error handler
+    # 6. Register the error handler
     app.add_error_handler(error_handler)
 
-    # 5. Start the bot (Python 3.14+ requires an explicit event loop)
+    # 7. Start the bot (Python 3.14+ requires an explicit event loop)
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     logger.info(f"🤖 {config.BUSINESS_NAME} Bot is running! Press Ctrl+C to stop.")
