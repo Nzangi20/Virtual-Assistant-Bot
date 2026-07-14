@@ -28,9 +28,10 @@ if not BOT_TOKEN:
 DATABASE_PATH = os.getenv("DATABASE_PATH", "bot_database.db")
 
 # ──────────────────────────────────────────────
-# 🧠  AI Engine (Google Gemini)
+# 🧠  AI Engine (Google Gemini or Groq)
 # ──────────────────────────────────────────────
 GEMINI_API_KEY = (os.getenv("GEMINI_API_KEY") or "").strip()
+GROQ_API_KEY = (os.getenv("Groq_KEY") or os.getenv("GROQ_API_KEY") or "").strip()
 
 # ──────────────────────────────────────────────
 # 🏢  Business Information (customize per client)
